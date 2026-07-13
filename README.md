@@ -1,5 +1,7 @@
 # tabler-server
 
+[![BuyMeACoffee](https://raw.githubusercontent.com/pachadotdev/buymeacoffee-badges/main/bmc-blue.svg)](https://www.buymeacoffee.com/pacha)
+
 ## About
 
 A **minimal**, Linux-only server for hosting [`tabler`](https://github.com/pachadotdev/tabler)
