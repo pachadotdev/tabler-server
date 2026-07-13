@@ -1,0 +1,19 @@
+[Unit]
+Description=tabler-server (minimal server for tabler R apps)
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/opt/tabler-server/bin/tabler-server --config /etc/tabler-server/tabler-server.conf
+# Workers run in their own process groups (setsid); KillMode=control-group
+# ensures they are cleaned up when the service stops.
+KillMode=control-group
+Restart=on-failure
+RestartSec=2
+# Run as an unprivileged user. If you need per-app privilege drop instead,
+# start as root and set `run_as` in the config.
+User=tabler
+Group=tabler
+
+[Install]
+WantedBy=multi-user.target
