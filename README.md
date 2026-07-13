@@ -55,6 +55,16 @@ http://localhost:3000/example2
 
 Visiting `http://localhost:3000/` lists the available apps.
 
+Visiting `http://localhost:3001/` shows the admin panel.
+
+<figure>
+<img src="screenshots/example1.png" title="Example 1" alt="combo" />
+</figure>
+
+<figure>
+<img src="screenshots/admin.png" title="Admin page" alt="combo" />
+</figure>
+
 ### App layout
 
 Each app is a directory containing an `app.R`. Two conventions are accepted:
@@ -191,7 +201,16 @@ The Apache License 2.0 permits commercial use, modification, distribution, and p
 
 ## Contributing
 
-See the [Code of conduct](https://github.com/pachadotdev/tabler-server/blob/main/.github/CODE_OF_CONDUCT.md)
+This project can largely improve with more people helping to improve it. R and Linux are the result
+of many coordinated actors with no central authority.
+
+If this project gets attention, I have the following values in mind:
+
+* **Public Commons**: No single organization dictates how people use, modify, or distribute the software.
+* **Individual Freedom**: Users have total control over their own systems and code.
+* **Community Based**: Suggestions to improve the framework are as values as improvements to the code and functionality.
+
+See the [Code of conduct](https://github.com/pachadotdev/tabler-server/blob/main/.github/CODE_OF_CONDUCT.md).
 
 ## License
 
