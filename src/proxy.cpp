@@ -17,6 +17,7 @@
 
 #include "http.hpp"
 #include "log.hpp"
+#include "metrics.hpp"
 
 namespace ts {
 
@@ -167,11 +168,15 @@ std::string app_index(const std::string &apps_dir) {
   return http_response(200, "OK", "text/html; charset=utf-8", body);
 }
 
-// Splice bytes both ways between client and backend until either side closes.
-void splice_bidirectional(int a, int b) {
+// Splice bytes both ways between client and backend until either side closes,
+// accounting the traffic against the session and the process-wide counters.
+//   client -> backend  == bytes_in  (uploaded by the browser)
+//   backend -> client  == bytes_out (served to the browser)
+void splice_bidirectional(int client_fd, int backend,
+                          const std::shared_ptr<Worker> &w) {
   struct pollfd fds[2];
-  fds[0].fd = a;
-  fds[1].fd = b;
+  fds[0].fd = client_fd;
+  fds[1].fd = backend;
   char buf[16384];
 
   for (;;) {
@@ -193,6 +198,14 @@ void splice_bidirectional(int a, int b) {
         ssize_t n = ::recv(from, buf, sizeof(buf), 0);
         if (n <= 0) return;  // EOF or error on either side ends the splice
         if (!send_all(to, buf, static_cast<size_t>(n))) return;
+        auto bytes = static_cast<uint64_t>(n);
+        if (from == client_fd) {
+          if (w) w->bytes_in.fetch_add(bytes, std::memory_order_relaxed);
+          metrics().bytes_in.fetch_add(bytes, std::memory_order_relaxed);
+        } else {
+          if (w) w->bytes_out.fetch_add(bytes, std::memory_order_relaxed);
+          metrics().bytes_out.fetch_add(bytes, std::memory_order_relaxed);
+        }
       }
     }
   }
@@ -335,7 +348,19 @@ void Proxy::handle_connection(int client_fd) {
   bool ok = true;
   // Forward the (possibly rewritten) request head and any buffered body bytes.
   ok = ok && send_all(backend, out_head);
-  if (ok && !req.leftover.empty()) ok = send_all(backend, req.leftover);
+  if (ok) {
+    auto bytes = static_cast<uint64_t>(out_head.size());
+    worker->bytes_in.fetch_add(bytes, std::memory_order_relaxed);
+    metrics().bytes_in.fetch_add(bytes, std::memory_order_relaxed);
+  }
+  if (ok && !req.leftover.empty()) {
+    ok = send_all(backend, req.leftover);
+    if (ok) {
+      auto bytes = static_cast<uint64_t>(req.leftover.size());
+      worker->bytes_in.fetch_add(bytes, std::memory_order_relaxed);
+      metrics().bytes_in.fetch_add(bytes, std::memory_order_relaxed);
+    }
+  }
 
   if (ok && set_cookie) {
     // Read the worker's response head so we can attach the session cookie.
@@ -343,13 +368,25 @@ void Proxy::handle_connection(int client_fd) {
     if (read_http_head_generic(backend, resp_head, resp_left)) {
       resp_head = inject_set_cookie(resp_head, sid);
       ok = send_all(client_fd, resp_head);
-      if (ok && !resp_left.empty()) ok = send_all(client_fd, resp_left);
+      if (ok) {
+        auto bytes = static_cast<uint64_t>(resp_head.size());
+        worker->bytes_out.fetch_add(bytes, std::memory_order_relaxed);
+        metrics().bytes_out.fetch_add(bytes, std::memory_order_relaxed);
+      }
+      if (ok && !resp_left.empty()) {
+        ok = send_all(client_fd, resp_left);
+        if (ok) {
+          auto bytes = static_cast<uint64_t>(resp_left.size());
+          worker->bytes_out.fetch_add(bytes, std::memory_order_relaxed);
+          metrics().bytes_out.fetch_add(bytes, std::memory_order_relaxed);
+        }
+      }
     } else {
       ok = false;
     }
   }
 
-  if (ok) splice_bidirectional(client_fd, backend);
+  if (ok) splice_bidirectional(client_fd, backend, worker);
 
   ::close(backend);
   workers_.conn_closed(worker);

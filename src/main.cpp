@@ -6,19 +6,23 @@
 #include <cstdlib>
 #include <cstring>
 #include <string>
+#include <thread>
 
 #include "config.hpp"
 #include "log.hpp"
 #include "proxy.hpp"
 #include "worker.hpp"
+#include "admin.hpp"
 
 namespace {
 
 ts::Proxy *g_proxy = nullptr;
 ts::WorkerManager *g_workers = nullptr;
+ts::AdminServer *g_admin = nullptr;
 
 void on_signal(int) {
   if (g_proxy) g_proxy->stop();
+  if (g_admin) g_admin->stop();
 }
 
 void print_usage(const char *argv0) {
@@ -83,9 +87,21 @@ int main(int argc, char **argv) {
 
   workers.start_reaper();
 
+  // Optional htop-like status dashboard on its own port.
+  ts::AdminServer admin(cfg, workers);
+  std::thread admin_thread;
+  if (cfg.admin_enabled) {
+    g_admin = &admin;
+    admin_thread = std::thread([&admin] { admin.listen_and_serve(); });
+  }
+
   bool ok = proxy.listen_and_serve();
 
   TS_INFO("shutting down; stopping workers");
+  if (cfg.admin_enabled) {
+    admin.stop();
+    if (admin_thread.joinable()) admin_thread.join();
+  }
   workers.stop();
   return ok ? 0 : 1;
 }

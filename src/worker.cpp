@@ -75,6 +75,33 @@ std::shared_ptr<Worker> WorkerManager::get_session(const std::string &sid) {
   return it == sessions_.end() ? nullptr : it->second;
 }
 
+std::vector<WorkerStat> WorkerManager::snapshot() const {
+  std::lock_guard<std::mutex> lock(mutex_);
+  auto now = Clock::now();
+  std::vector<WorkerStat> out;
+  out.reserve(sessions_.size());
+  for (const auto &kv : sessions_) {
+    const auto &w = kv.second;
+    WorkerStat s;
+    s.sid = w->sid;
+    s.app = w->app;
+    s.pid = w->pid;
+    s.port = w->port;
+    s.active_conns = w->active_conns;
+    s.ws_seen = w->ws_seen;
+    s.uptime_s = std::chrono::duration_cast<std::chrono::duration<double>>(
+                     now - w->started_at)
+                     .count();
+    s.idle_s = std::chrono::duration_cast<std::chrono::duration<double>>(
+                   now - w->last_active)
+                   .count();
+    s.bytes_in = w->bytes_in.load(std::memory_order_relaxed);
+    s.bytes_out = w->bytes_out.load(std::memory_order_relaxed);
+    out.push_back(std::move(s));
+  }
+  return out;
+}
+
 std::shared_ptr<Worker> WorkerManager::ensure_session(const std::string &sid,
                                                       const std::string &app) {
   uint16_t port = 0;
@@ -96,6 +123,7 @@ std::shared_ptr<Worker> WorkerManager::ensure_session(const std::string &sid,
     w->sid = sid;
     w->app = app;
     w->port = port;
+    w->started_at = Clock::now();
     w->last_active = Clock::now();
     w->disconnected_at = Clock::now();
     sessions_[sid] = w;

@@ -15,6 +15,11 @@ struct Config {
   std::string run_as;  // empty = do not switch user
   std::string log_dir = "/var/log/tabler-server";
 
+  // --- Admin dashboard (htop-like status page) ---
+  bool admin_enabled = true;
+  std::string admin_listen = "127.0.0.1";
+  uint16_t admin_port = 3001;
+
   uint16_t worker_port_base = 34000;
   uint16_t worker_port_count = 256;
 

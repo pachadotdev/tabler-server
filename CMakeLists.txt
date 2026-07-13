@@ -19,6 +19,7 @@ add_executable(tabler-server
   src/http.cpp
   src/worker.cpp
   src/proxy.cpp
+  src/admin.cpp
 )
 
 target_link_libraries(tabler-server PRIVATE Threads::Threads)

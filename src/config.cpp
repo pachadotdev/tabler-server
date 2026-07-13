@@ -59,6 +59,12 @@ bool Config::load(const std::string &path, Config &out, std::string &error) {
       out.run_as = value;
     } else if (key == "log_dir") {
       out.log_dir = value;
+    } else if (key == "admin_enabled") {
+      out.admin_enabled = to_int(value, out.admin_enabled ? 1 : 0) != 0;
+    } else if (key == "admin_listen") {
+      out.admin_listen = value;
+    } else if (key == "admin_port") {
+      out.admin_port = static_cast<uint16_t>(to_int(value, out.admin_port));
     } else if (key == "worker_port_base") {
       out.worker_port_base = static_cast<uint16_t>(to_int(value, out.worker_port_base));
     } else if (key == "worker_port_count") {
