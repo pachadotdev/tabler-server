@@ -92,6 +92,10 @@ server <- function(input, output, session) { ... }
 You do **not** choose the port in the app - tabler-server assigns a private
 loopback port to each worker.
 
+## Examples
+
+`tabler` provides multiple examples [here](https://github.com/pachadotdev/tabler/tree/main/examples).
+
 ## Sessions
 
 - **One R worker per browser session.** A session is created the first time a
@@ -200,6 +204,8 @@ Shiny Server Open Source lacks enterprise features like built-in user authentica
 Tabler Server, and the tabler R package, allow to create interactive dashboard with a similar syntax to Shiny apps in R and both are released under the Apache License. This means that Tabler Server is not a commercial product, it can be used for a wide range of projects including commercial uses, and it is released "as is".
 
 The Apache License 2.0 permits commercial use, modification, distribution, and private use, while prohibiting holding authors liable and the unauthorized use of trademarks. It requires including the original copyright, patent notices, and license text in any distribution. See more on [tl;drLegal](https://www.tldrlegal.com/license/apache-license-2-0-apache-2-0).
+
+Besides uses, Tabler Server allows multi-session and lets you open the same app independently from different tabs, browsers or machines.
 
 ## Contributing
 

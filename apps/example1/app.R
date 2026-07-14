@@ -19,5 +19,3 @@ server <- function(input, output, session) {
     paste0("Hello, ", input$name, "!")
   })
 }
-
-tablerApp(ui, server)
