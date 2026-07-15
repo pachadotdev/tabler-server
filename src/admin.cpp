@@ -301,7 +301,8 @@ function draw(id, arr, color, max){
   ctx.lineTo(w, h); ctx.lineTo(w-(arr.length-1)*step, h); ctx.closePath();
   ctx.globalAlpha = 0.12; ctx.fillStyle = color; ctx.fill(); ctx.globalAlpha = 1;
 }
-function cpuColor(p){ return p>85?"var(--red)":p>60?"var(--yel)":"var(--grn)"; }
+const COLORS = { grn:"#3fb950", yel:"#d29922", red:"#f85149", blu:"#58a6ff" };
+function cpuColor(p){ return p>85?COLORS.red:p>60?COLORS.yel:COLORS.grn; }
 
 async function tick(){
   let d;
@@ -326,7 +327,7 @@ async function tick(){
     fmtBytes(d.system.mem_used)+" / "+fmtBytes(d.system.mem_total);
   const smBar = document.getElementById("sys-mem-bar");
   smBar.style.width = Math.min(100,mp)+"%"; smBar.style.background = cpuColor(mp);
-  push(series.sysmem, mp); draw("c-sysmem", series.sysmem, "var(--blu)", 100);
+  push(series.sysmem, mp); draw("c-sysmem", series.sysmem, COLORS.grn, 100);
 
   // workers totals
   document.getElementById("w-cpu").textContent = d.totals.cpu_pct.toFixed(1)+"%";
@@ -358,7 +359,7 @@ async function tick(){
     arr.forEach((v,i)=>{const x=w-(arr.length-1-i)*step,y=h-(v/netMax)*(h-2)-1; i?ctx.lineTo(x,y):ctx.moveTo(x,y);});
     ctx.lineWidth=1.5; ctx.strokeStyle=color; ctx.stroke();
   };
-  line(series.netin,"var(--blu)"); line(series.netout,"var(--grn)");
+  line(series.netin,COLORS.blu); line(series.netout,COLORS.grn);
 
   // table
   const rows = document.getElementById("rows");

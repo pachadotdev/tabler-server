@@ -37,8 +37,10 @@ bool Config::load(const std::string &path, Config &out, std::string &error) {
   int lineno = 0;
   while (std::getline(in, line)) {
     ++lineno;
+    size_t hash = line.find('#');
+    if (hash != std::string::npos) line = line.substr(0, hash);
     std::string s = trim(line);
-    if (s.empty() || s[0] == '#') continue;
+    if (s.empty()) continue;
 
     // key <whitespace> value...
     size_t sp = s.find_first_of(" \t");
