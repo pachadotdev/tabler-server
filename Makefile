@@ -1,13 +1,13 @@
 # Minimal Makefile for tabler-server (Linux, C++17).
-# Prefer `cmake` for packaging; this is here for quick local builds.
 
 CXX      ?= g++
 CXXFLAGS ?= -std=c++17 -O2 -Wall -Wextra -pthread
 LDFLAGS  ?= -pthread
 
+BUILDDIR := build
 SRC := $(wildcard src/*.cpp)
-OBJ := $(SRC:.cpp=.o)
-BIN := tabler-server
+OBJ := $(SRC:src/%.cpp=$(BUILDDIR)/%.o)
+BIN := $(BUILDDIR)/tabler-server
 
 PREFIX     ?= /opt/tabler-server
 SYSCONFDIR ?= /etc/tabler-server
@@ -23,11 +23,14 @@ all: $(BIN)
 $(BIN): $(OBJ)
 	$(CXX) $(OBJ) -o $@ $(LDFLAGS)
 
-src/%.o: src/%.cpp
+$(BUILDDIR)/%.o: src/%.cpp | $(BUILDDIR)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
+$(BUILDDIR):
+	mkdir -p $(BUILDDIR)
+
 clean:
-	rm -f $(OBJ) $(BIN)
+	rm -rf $(BUILDDIR)
 
 install: all
 	# --- program files ---

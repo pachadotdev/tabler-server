@@ -18,14 +18,8 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 echo "==> Building tabler-server"
-if command -v cmake >/dev/null 2>&1; then
-  cmake -S "$SCRIPT_DIR" -B "$SCRIPT_DIR/build" -DCMAKE_BUILD_TYPE=Release
-  cmake --build "$SCRIPT_DIR/build" -j
-  BIN="$SCRIPT_DIR/build/tabler-server"
-else
-  make -C "$SCRIPT_DIR"
-  BIN="$SCRIPT_DIR/tabler-server"
-fi
+make -C "$SCRIPT_DIR"
+BIN="$SCRIPT_DIR/build/tabler-server"
 
 echo "==> Creating service user '$SERVICE_USER' (if missing)"
 if ! id -u "$SERVICE_USER" >/dev/null 2>&1; then

@@ -30,7 +30,7 @@ Internet -> | nginx (TLS, :443) -> tabler-server (C++, :3000)     |
 
 ## Concept
 
-1. **Make / CMake based - plain C++17, no heavy dependencies**
+1. **Make based - plain C++17, no heavy dependencies**
 2. **C++ does the proxying/supervision**
 3. **R runs the apps**
 4. **No Python support**
@@ -116,52 +116,36 @@ isolation can be added later with a one-line change to `tabler-reactive.js`
 
 ## Requirements
 
-- Linux, `g++` (C++17) or `clang++`, `make`, optionally `cmake`.
+- Linux, `g++` (C++17) or `clang++`, `make`.
 - `R` with the `tabler` package installed **system-wide** (so workers can
   `library(tabler)`).
 
-## Build
-
-Using Make:
+## Install
 
 ```bash
-make -j4
-```
-
-or CMake:
-
-```bash
-cmake -S . -B build
-cmake --build build
-```
-
-The binary is produced at `build/tabler-server` (CMake) or `./tabler-server` (Make).
-
-## Run (development)
-
-```bash
-./tabler-server --config config/tabler-server.conf
-```
-
-## Install as a service
-
-Either
-
-```bash
+chmod +x ./scripts/install.sh 
 sudo ./scripts/install.sh
 sudo systemctl enable --now tabler-server
 sudo systemctl status tabler-server
 ```
 
-or
+## Development
 
 ```bash
-sudo make install
-sudo systemctl enable --now tabler-server
-sudo systemctl status tabler-server
+make -j4
 ```
 
-Then drop apps into `/srv/tabler-server/apps/<name>/app.R`.
+The binaries target is `build/tabler-server`.
+
+To run in development mode:
+
+```bash
+./build/tabler-server --config config/tabler-server.conf
+```
+
+## Adding apps
+
+Copy apps into `/srv/tabler-server/apps/<name>/app.R`.
 
 ## TLS with nginx + Let's Encrypt
 
