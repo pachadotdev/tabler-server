@@ -64,6 +64,12 @@ the `docs_dir` directory (defaults to `docs`, i.e. this repository's own
 `docs/` folder in a dev checkout). This is a plain read-only static file
 server - no R workers involved.
 
+Visiting `http://localhost:3020/` serves the static R package documentation
+site from the `docs_r_dir` directory (defaults to `docs-r`, i.e. this
+repository's own `docs-r/` folder in a dev checkout - typically a `pkgdown`
+site). This is also a plain read-only static file server - no R workers
+involved.
+
 <figure>
 <img src="screenshots/example2.png" title="Example 2" alt="example2" />
 </figure>
@@ -194,6 +200,10 @@ line, `#` for comments.
 | `docs_listen`       | `127.0.0.1`                  | Documentation site bind address                |
 | `docs_port`         | `3010`                       | Documentation site bind port                   |
 | `docs_dir`          | `/opt/tabler-server/share/docs` | Directory of static files to serve as docs |
+| `docs_r_enabled`    | `1`                          | Enable/disable the R package documentation site |
+| `docs_r_listen`     | `127.0.0.1`                  | R package documentation site bind address      |
+| `docs_r_port`       | `3020`                       | R package documentation site bind port         |
+| `docs_r_dir`        | `/opt/tabler-server/share/docs-r` | Directory of static files to serve as R docs |
 
 ## Differences with Shiny Server
 

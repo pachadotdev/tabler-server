@@ -13,6 +13,7 @@
 #include <sstream>
 #include <string>
 #include <thread>
+#include <utility>
 #include <vector>
 
 #include "http.hpp"
@@ -138,7 +139,12 @@ bool read_file(const std::string &path, std::string &out) {
 
 }  // namespace
 
-DocsServer::DocsServer(const Config &cfg) : cfg_(cfg) {}
+DocsServer::DocsServer(std::string listen, uint16_t port, std::string dir,
+                       std::string label)
+    : listen_(std::move(listen)),
+      port_(port),
+      dir_(std::move(dir)),
+      label_(std::move(label)) {}
 
 void DocsServer::stop() {
   running_ = false;
@@ -163,7 +169,7 @@ void DocsServer::handle_connection(int client_fd) {
 
   std::string decoded = decode_path(req.path());
   std::string fs_path;
-  if (!safe_join(cfg_.docs_dir, decoded, fs_path)) {
+  if (!safe_join(dir_, decoded, fs_path)) {
     send_all(client_fd, http_response(400, "Bad Request", "text/plain", "Bad Request"));
     return;
   }
@@ -199,22 +205,22 @@ bool DocsServer::listen_and_serve() {
 
   sockaddr_in addr{};
   addr.sin_family = AF_INET;
-  addr.sin_port = htons(cfg_.docs_port);
-  if (inet_pton(AF_INET, cfg_.docs_listen.c_str(), &addr.sin_addr) != 1) {
-    TS_ERROR("invalid docs_listen address: %s", cfg_.docs_listen.c_str());
+  addr.sin_port = htons(port_);
+  if (inet_pton(AF_INET, listen_.c_str(), &addr.sin_addr) != 1) {
+    TS_ERROR("invalid %s listen address: %s", label_.c_str(), listen_.c_str());
     return false;
   }
   if (::bind(listen_fd_, reinterpret_cast<sockaddr *>(&addr), sizeof(addr)) != 0) {
-    TS_ERROR("docs bind %s:%u failed: %s", cfg_.docs_listen.c_str(), cfg_.docs_port,
+    TS_ERROR("%s bind %s:%u failed: %s", label_.c_str(), listen_.c_str(), port_,
              std::strerror(errno));
     return false;
   }
   if (::listen(listen_fd_, 16) != 0) {
-    TS_ERROR("docs listen() failed: %s", std::strerror(errno));
+    TS_ERROR("%s listen() failed: %s", label_.c_str(), std::strerror(errno));
     return false;
   }
-  TS_INFO("docs site on http://%s:%u, serving %s", cfg_.docs_listen.c_str(),
-          cfg_.docs_port, cfg_.docs_dir.c_str());
+  TS_INFO("%s site on http://%s:%u, serving %s", label_.c_str(), listen_.c_str(),
+          port_, dir_.c_str());
 
   while (running_) {
     int client = ::accept(listen_fd_, nullptr, nullptr);

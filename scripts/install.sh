@@ -27,10 +27,11 @@ if ! id -u "$SERVICE_USER" >/dev/null 2>&1; then
 fi
 
 echo "==> Installing files"
-install -d "$PREFIX/bin" "$PREFIX/share" "$PREFIX/share/docs" "$CONF_DIR" "$APPS_DIR" "$LOG_DIR"
+install -d "$PREFIX/bin" "$PREFIX/share" "$PREFIX/share/docs" "$PREFIX/share/docs-r" "$CONF_DIR" "$APPS_DIR" "$LOG_DIR"
 install -m 0755 "$BIN" "$PREFIX/bin/tabler-server"
 install -m 0644 "$SCRIPT_DIR/R/worker.R" "$PREFIX/share/worker.R"
 cp -r "$SCRIPT_DIR/docs/." "$PREFIX/share/docs/"
+cp -r "$SCRIPT_DIR/docs-r/." "$PREFIX/share/docs-r/"
 
 if [[ ! -f "$CONF_DIR/tabler-server.conf" ]]; then
   install -m 0644 "$SCRIPT_DIR/config/tabler-server.conf" "$CONF_DIR/tabler-server.conf"

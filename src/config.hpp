@@ -26,6 +26,12 @@ struct Config {
   uint16_t docs_port = 3010;
   std::string docs_dir = "/opt/tabler-server/share/docs";
 
+  // --- Static R package documentation site (served read-only) ---
+  bool docs_r_enabled = true;
+  std::string docs_r_listen = "127.0.0.1";
+  uint16_t docs_r_port = 3020;
+  std::string docs_r_dir = "/opt/tabler-server/share/docs-r";
+
   uint16_t worker_port_base = 34000;
   uint16_t worker_port_count = 256;
 

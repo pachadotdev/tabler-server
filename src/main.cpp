@@ -21,11 +21,13 @@ ts::Proxy *g_proxy = nullptr;
 ts::WorkerManager *g_workers = nullptr;
 ts::AdminServer *g_admin = nullptr;
 ts::DocsServer *g_docs = nullptr;
+ts::DocsServer *g_docs_r = nullptr;
 
 void on_signal(int) {
   if (g_proxy) g_proxy->stop();
   if (g_admin) g_admin->stop();
   if (g_docs) g_docs->stop();
+  if (g_docs_r) g_docs_r->stop();
 }
 
 void print_usage(const char *argv0) {
@@ -99,11 +101,19 @@ int main(int argc, char **argv) {
   }
 
   // Optional static documentation site on its own port.
-  ts::DocsServer docs(cfg);
+  ts::DocsServer docs(cfg.docs_listen, cfg.docs_port, cfg.docs_dir, "docs");
   std::thread docs_thread;
   if (cfg.docs_enabled) {
     g_docs = &docs;
     docs_thread = std::thread([&docs] { docs.listen_and_serve(); });
+  }
+
+  // Optional static R package documentation site on its own port.
+  ts::DocsServer docs_r(cfg.docs_r_listen, cfg.docs_r_port, cfg.docs_r_dir, "docs-r");
+  std::thread docs_r_thread;
+  if (cfg.docs_r_enabled) {
+    g_docs_r = &docs_r;
+    docs_r_thread = std::thread([&docs_r] { docs_r.listen_and_serve(); });
   }
 
   bool ok = proxy.listen_and_serve();
@@ -116,6 +126,10 @@ int main(int argc, char **argv) {
   if (cfg.docs_enabled) {
     docs.stop();
     if (docs_thread.joinable()) docs_thread.join();
+  }
+  if (cfg.docs_r_enabled) {
+    docs_r.stop();
+    if (docs_r_thread.joinable()) docs_r_thread.join();
   }
   workers.stop();
   return ok ? 0 : 1;

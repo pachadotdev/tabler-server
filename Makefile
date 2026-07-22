@@ -45,6 +45,9 @@ install: all
 	# --- static documentation site ---
 	install -d $(DESTDIR)$(PREFIX)/share/docs
 	cp -r docs/. $(DESTDIR)$(PREFIX)/share/docs/
+	# --- static R package documentation site ---
+	install -d $(DESTDIR)$(PREFIX)/share/docs-r
+	cp -r docs-r/. $(DESTDIR)$(PREFIX)/share/docs-r/
 	# --- config (kept if it already exists) ---
 	install -d $(DESTDIR)$(SYSCONFDIR)
 	@if [ ! -f $(DESTDIR)$(SYSCONFDIR)/tabler-server.conf ]; then \
