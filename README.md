@@ -92,6 +92,8 @@ Tabler provides templates for standalone and modular apps. See the [quick start]
 
 For other layouts, there are multiple examples [here](https://github.com/pachadotdev/tabler/tree/main/examples).
 
+I built a full dashboard that uses environment variables, SQL connections, caching, and D3 plots [here](https://github.com/pachadotdev/tradestatistics-dashboard).
+
 ## Sessions
 
 - **One R worker per browser session.** A session is created the first time a
