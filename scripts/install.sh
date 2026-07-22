@@ -27,9 +27,10 @@ if ! id -u "$SERVICE_USER" >/dev/null 2>&1; then
 fi
 
 echo "==> Installing files"
-install -d "$PREFIX/bin" "$PREFIX/share" "$CONF_DIR" "$APPS_DIR" "$LOG_DIR"
+install -d "$PREFIX/bin" "$PREFIX/share" "$PREFIX/share/docs" "$CONF_DIR" "$APPS_DIR" "$LOG_DIR"
 install -m 0755 "$BIN" "$PREFIX/bin/tabler-server"
 install -m 0644 "$SCRIPT_DIR/R/worker.R" "$PREFIX/share/worker.R"
+cp -r "$SCRIPT_DIR/docs/." "$PREFIX/share/docs/"
 
 if [[ ! -f "$CONF_DIR/tabler-server.conf" ]]; then
   install -m 0644 "$SCRIPT_DIR/config/tabler-server.conf" "$CONF_DIR/tabler-server.conf"
@@ -40,10 +41,8 @@ fi
 install -m 0644 "$SCRIPT_DIR/config/systemd/tabler-server.service" \
   /etc/systemd/system/tabler-server.service
 
-echo "==> Installing example apps (if apps dir is empty)"
-if [[ -z "$(ls -A "$APPS_DIR" 2>/dev/null)" ]]; then
-  cp -r "$SCRIPT_DIR/apps/." "$APPS_DIR/"
-fi
+echo "==> Installing example apps (updating shipped examples, keeping other apps)"
+cp -r "$SCRIPT_DIR/apps/." "$APPS_DIR/"
 
 chown -R "$SERVICE_USER:$SERVICE_USER" /srv/tabler-server "$LOG_DIR"
 

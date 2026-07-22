@@ -20,6 +20,12 @@ struct Config {
   std::string admin_listen = "127.0.0.1";
   uint16_t admin_port = 3001;
 
+  // --- Static documentation site (served read-only, no R workers) ---
+  bool docs_enabled = true;
+  std::string docs_listen = "127.0.0.1";
+  uint16_t docs_port = 3010;
+  std::string docs_dir = "/opt/tabler-server/share/docs";
+
   uint16_t worker_port_base = 34000;
   uint16_t worker_port_count = 256;
 

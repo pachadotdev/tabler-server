@@ -13,16 +13,19 @@
 #include "proxy.hpp"
 #include "worker.hpp"
 #include "admin.hpp"
+#include "docs.hpp"
 
 namespace {
 
 ts::Proxy *g_proxy = nullptr;
 ts::WorkerManager *g_workers = nullptr;
 ts::AdminServer *g_admin = nullptr;
+ts::DocsServer *g_docs = nullptr;
 
 void on_signal(int) {
   if (g_proxy) g_proxy->stop();
   if (g_admin) g_admin->stop();
+  if (g_docs) g_docs->stop();
 }
 
 void print_usage(const char *argv0) {
@@ -95,12 +98,24 @@ int main(int argc, char **argv) {
     admin_thread = std::thread([&admin] { admin.listen_and_serve(); });
   }
 
+  // Optional static documentation site on its own port.
+  ts::DocsServer docs(cfg);
+  std::thread docs_thread;
+  if (cfg.docs_enabled) {
+    g_docs = &docs;
+    docs_thread = std::thread([&docs] { docs.listen_and_serve(); });
+  }
+
   bool ok = proxy.listen_and_serve();
 
   TS_INFO("shutting down; stopping workers");
   if (cfg.admin_enabled) {
     admin.stop();
     if (admin_thread.joinable()) admin_thread.join();
+  }
+  if (cfg.docs_enabled) {
+    docs.stop();
+    if (docs_thread.joinable()) docs_thread.join();
   }
   workers.stop();
   return ok ? 0 : 1;

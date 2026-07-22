@@ -2,11 +2,13 @@
 
 CXX      ?= g++
 CXXFLAGS ?= -std=c++17 -O2 -Wall -Wextra -pthread
+CPPFLAGS ?= -MMD -MP
 LDFLAGS  ?= -pthread
 
 BUILDDIR := build
 SRC := $(wildcard src/*.cpp)
 OBJ := $(SRC:src/%.cpp=$(BUILDDIR)/%.o)
+DEP := $(OBJ:.o=.d)
 BIN := $(BUILDDIR)/tabler-server
 
 PREFIX     ?= /opt/tabler-server
@@ -24,7 +26,9 @@ $(BIN): $(OBJ)
 	$(CXX) $(OBJ) -o $@ $(LDFLAGS)
 
 $(BUILDDIR)/%.o: src/%.cpp | $(BUILDDIR)
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
+
+-include $(DEP)
 
 $(BUILDDIR):
 	mkdir -p $(BUILDDIR)
@@ -38,6 +42,9 @@ install: all
 	install -d $(DESTDIR)$(PREFIX)/share
 	install -m 0755 $(BIN) $(DESTDIR)$(PREFIX)/bin/$(BIN)
 	install -m 0644 R/worker.R $(DESTDIR)$(PREFIX)/share/worker.R
+	# --- static documentation site ---
+	install -d $(DESTDIR)$(PREFIX)/share/docs
+	cp -r docs/. $(DESTDIR)$(PREFIX)/share/docs/
 	# --- config (kept if it already exists) ---
 	install -d $(DESTDIR)$(SYSCONFDIR)
 	@if [ ! -f $(DESTDIR)$(SYSCONFDIR)/tabler-server.conf ]; then \
@@ -51,9 +58,7 @@ install: all
 	# --- runtime dirs + example apps ---
 	install -d $(DESTDIR)$(APPSDIR)
 	install -d $(DESTDIR)$(LOGDIR)
-	@if [ -z "$$(ls -A $(DESTDIR)$(APPSDIR) 2>/dev/null)" ]; then \
-		cp -r apps/. $(DESTDIR)$(APPSDIR)/; \
-	fi
+	cp -r apps/. $(DESTDIR)$(APPSDIR)/
 	# --- post-install: only on a real system install (DESTDIR unset) ---
 	@if [ -z "$(DESTDIR)" ]; then \
 		if ! id -u $(SERVICE_USER) >/dev/null 2>&1; then \

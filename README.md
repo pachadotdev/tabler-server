@@ -59,6 +59,11 @@ Visiting `http://localhost:3000/` lists the available apps.
 
 Visiting `http://localhost:3001/` shows the admin panel.
 
+Visiting `http://localhost:3010/` serves the static documentation site from
+the `docs_dir` directory (defaults to `docs`, i.e. this repository's own
+`docs/` folder in a dev checkout). This is a plain read-only static file
+server - no R workers involved.
+
 <figure>
 <img src="screenshots/example2.png" title="Example 2" alt="example2" />
 </figure>
@@ -182,6 +187,13 @@ line, `#` for comments.
 | `disconnect_grace`  | `15`                        | Kill a worker N seconds after its WS closes    |
 | `worker_start_timeout` | `20`                     | Seconds to wait for a worker to accept traffic |
 | `log_dir`           | `/var/log/tabler-server`    | Worker stderr logs                             |
+| `admin_enabled`     | `1`                          | Enable/disable the admin dashboard             |
+| `admin_listen`      | `127.0.0.1`                  | Admin dashboard bind address                   |
+| `admin_port`        | `3001`                       | Admin dashboard bind port                      |
+| `docs_enabled`      | `1`                          | Enable/disable the static documentation site   |
+| `docs_listen`       | `127.0.0.1`                  | Documentation site bind address                |
+| `docs_port`         | `3010`                       | Documentation site bind port                   |
+| `docs_dir`          | `/opt/tabler-server/share/docs` | Directory of static files to serve as docs |
 
 ## Differences with Shiny Server
 
