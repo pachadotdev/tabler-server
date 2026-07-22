@@ -69,18 +69,9 @@ Visiting `http://localhost:3001/` shows the admin panel.
 
 ### App layout
 
-Each app is a directory containing an `app.R`. Two conventions are accepted:
-
-```r
-# The usual tabler app; the final tablerApp() call is intercepted
-# by the server, which re-launches it on a server-assigned port.
-library(tabler)
-
-ui <- page(title = "Example 1", body = body("Hello from example1"))
-server <- function(input, output, session) {}
-
-tablerApp(ui, server)
-```
+Each app is a directory containing an `app.R`. `tablerApp(ui, server)` is not
+needed to run apps with tabler-server, it is only required to run an app from
+a local R session.
 
 ```r
 # Define `ui` and `server`; no tablerApp() call needed.
@@ -89,8 +80,11 @@ ui <- page(...)
 server <- function(input, output, session) { ... }
 ```
 
-You do **not** choose the port in the app - tabler-server assigns a private
+You do **not** choose the port in the app. tabler-server assigns a private
 loopback port to each worker.
+
+Using `tablerApp()` in the script to run an app via tabler-server will result
+in log errors related to `tablerApp()` using the default port 3000.
 
 ## Examples
 
@@ -160,6 +154,70 @@ sudo systemctl reload nginx
 
 The provided nginx config already forwards WebSocket upgrade headers, which the
 tabler reactive bridge needs.
+
+If you want to link one app to one domain instead all listing all apps from
+my.site, you need something like this:
+
+```nginx
+server {
+    server_name my.site www.my.site;
+
+    access_log /var/log/nginx/mysite.access.log;
+    error_log /var/log/nginx/mysite.error.log;
+
+    # 1. Bare domain root -> triggers a page load for the "myapp" app.
+    # tabler-server mints a fresh session here and returns the app HTML, which
+    # itself references assets with ROOT-relative paths (e.g. ./js/, ./css,
+    # etc.), not /myapp/js/ - so no rewrite/redirect tricks are needed.
+    location = / {
+        proxy_pass http://127.0.0.1:3000/myapp;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # 2. Everything else (e.g., CSS assets): forward UNCHANGED. tabler-server
+    # routes these purely by the tabler_sid cookie (Set-Cookie Path=/), not by
+    # URL prefix - do NOT rewrite or prepend /myapp here.
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_redirect off;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # WebSocket support (Mandatory for tabler's reactive bridge)
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_read_timeout 20d;
+        proxy_buffering off;
+    }
+
+    listen 443 ssl; # managed by Certbot
+    ssl_certificate /etc/letsencrypt/live/my.site/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/my.site/privkey.pem; # managed by Certbot
+    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+}
+
+server {
+    if ($host = www.my.site) {
+      return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+    if ($host = my.site) {
+      return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+    server_name my.site www.my.site;
+    listen 80;
+    return 404; # managed by Certbot
+}
+```
 
 ## Configuration
 
