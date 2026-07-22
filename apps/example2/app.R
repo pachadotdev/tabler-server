@@ -1,18 +1,10 @@
 library(tabler)
 
-# This app defines `ui` and `server` without calling tablerApp(); tabler-server
-# launches it on an assigned port. Both styles are supported.
-
 ui <- page(
   title = "Example 2",
-  layout = "vertical",
-  navbar = list(
-    side = sidebar_menu(
-      menu_item("Counter", icon = "adjustments")
-    )
-  ),
+  layout = "boxed",
+  navbar = list(top = topbar(title = "Example 2")),
   body = body(
-    h2("Example 2"),
     p("A per-session counter. Each browser session gets its own R worker, so"),
     p("the count is independent from other sessions."),
     actionButton("inc", "Increment"),
@@ -29,3 +21,6 @@ server <- function(input, output, session) {
     paste("Count:", n())
   })
 }
+
+# debug, not for tabler-server running
+# tablerApp(ui, server)

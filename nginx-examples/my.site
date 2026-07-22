@@ -1,0 +1,58 @@
+server {
+    server_name my.site www.my.site;
+
+    access_log /var/log/nginx/mysite.access.log;
+    error_log /var/log/nginx/mysite.error.log;
+
+    # 1. Bare domain root -> triggers a page load for the "myapp" app.
+    # tabler-server mints a fresh session here and returns the app HTML, which
+    # itself references assets with ROOT-relative paths (e.g. ./js/, ./css,
+    # etc.), not /myapp/js/ - so no rewrite/redirect tricks are needed.
+    location = / {
+        proxy_pass http://127.0.0.1:3000/myapp;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # 2. Everything else (e.g., CSS assets): forward UNCHANGED. tabler-server
+    # routes these purely by the tabler_sid cookie (Set-Cookie Path=/), not by
+    # URL prefix - do NOT rewrite or prepend /myapp here.
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_redirect off;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # WebSocket support (Mandatory for tabler's reactive bridge)
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_read_timeout 20d;
+        proxy_buffering off;
+    }
+
+    listen 443 ssl; # managed by Certbot
+    ssl_certificate /etc/letsencrypt/live/my.site/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/my.site/privkey.pem; # managed by Certbot
+    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+}
+
+server {
+    if ($host = www.my.site) {
+      return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+    if ($host = my.site) {
+      return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+    server_name my.site www.my.site;
+    listen 80;
+    return 404; # managed by Certbot
+}
