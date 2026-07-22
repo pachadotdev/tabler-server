@@ -71,6 +71,16 @@ class WorkerManager {
   // A point-in-time copy of every live worker's state, for the dashboard.
   std::vector<WorkerStat> snapshot() const;
 
+  // Terminate the worker for a session, if any. Returns true if a worker was
+  // found and killed. Used by the admin dashboard's "stop" action.
+  bool kill_session(const std::string &sid);
+
+  // Terminate the worker for a session (if any) and immediately spawn a
+  // replacement with the same sid+app, so the app is ready before the client
+  // reconnects. Returns nullptr if there was no such session or the respawn
+  // failed. Used by the admin dashboard's "reload" action.
+  std::shared_ptr<Worker> restart_session(const std::string &sid);
+
   // Connection accounting used to drive idle/disconnect reaping.
   void conn_opened(const std::shared_ptr<Worker> &w, bool is_ws);
   void conn_closed(const std::shared_ptr<Worker> &w);

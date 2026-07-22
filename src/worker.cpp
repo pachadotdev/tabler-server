@@ -193,6 +193,26 @@ std::shared_ptr<Worker> WorkerManager::ensure_session(const std::string &sid,
   return w;
 }
 
+bool WorkerManager::kill_session(const std::string &sid) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  auto it = sessions_.find(sid);
+  if (it == sessions_.end()) return false;
+  kill_worker(it->second);
+  return true;
+}
+
+std::shared_ptr<Worker> WorkerManager::restart_session(const std::string &sid) {
+  std::string app;
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    auto it = sessions_.find(sid);
+    if (it == sessions_.end()) return nullptr;
+    app = it->second->app;
+    kill_worker(it->second);
+  }
+  return ensure_session(sid, app);
+}
+
 void WorkerManager::conn_opened(const std::shared_ptr<Worker> &w, bool is_ws) {
   if (!w) return;
   std::lock_guard<std::mutex> lock(mutex_);

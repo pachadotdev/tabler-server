@@ -28,6 +28,8 @@ class AdminServer {
  private:
   void handle_connection(int client_fd);
   std::string build_stats_json();
+  // Handles POST /api/stop and /api/reload, keyed by the sid query param.
+  std::string handle_action(const std::string &target, bool reload);
 
   // Per-pid CPU accounting: last (proc_ticks, total_ticks) sample so we can
   // compute a %CPU over the interval between two dashboard polls.

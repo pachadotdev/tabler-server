@@ -1,5 +1,4 @@
 /build/
-/tabler-server
 *.o
 *.obj
 *.log

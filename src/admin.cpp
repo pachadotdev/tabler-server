@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <cctype>
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -172,6 +173,36 @@ std::string num(double v) {
   return buf;
 }
 
+// Extracts `key`'s value from a request target's query string ("/path?a=b&c=d"),
+// or "" if absent. No percent-decoding: sids are restricted to [a-z0-9].
+std::string query_param(const std::string &target, const std::string &key) {
+  size_t q = target.find('?');
+  if (q == std::string::npos) return "";
+  std::string qs = target.substr(q + 1);
+  size_t pos = 0;
+  while (pos < qs.size()) {
+    size_t amp = qs.find('&', pos);
+    size_t end = amp == std::string::npos ? qs.size() : amp;
+    size_t eq = qs.find('=', pos);
+    if (eq != std::string::npos && eq < end && qs.compare(pos, eq - pos, key) == 0) {
+      return qs.substr(eq + 1, end - eq - 1);
+    }
+    if (amp == std::string::npos) break;
+    pos = amp + 1;
+  }
+  return "";
+}
+
+// Session ids (see proxy.cpp's random_sid()) are always 24 lowercase
+// alphanumeric characters; reject anything else before using one as a map key.
+bool is_valid_sid(const std::string &sid) {
+  if (sid.empty() || sid.size() > 64) return false;
+  for (char c : sid) {
+    if (!std::isalnum(static_cast<unsigned char>(c))) return false;
+  }
+  return true;
+}
+
 const char *kDashboardHtml = R"HTML(<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -212,6 +243,14 @@ const char *kDashboardHtml = R"HTML(<!DOCTYPE html>
   .up { background:var(--grn); } .idle { background:var(--yel); }
   .empty { padding:1.5rem; text-align:center; color:var(--dim); }
   .mini { font-size:11px; }
+  .actions { text-align:right; white-space:nowrap; }
+  .btn { font:inherit; font-size:11px; padding:.2rem .5rem; margin-left:.35rem;
+         border-radius:5px; border:1px solid #2a3542; background:#161e28;
+         color:var(--fg); cursor:pointer; }
+  .btn:hover { border-color:#3a4a5c; }
+  .btn:disabled { opacity:.5; cursor:default; }
+  .btn-reload:hover { color:var(--blu); border-color:var(--blu); }
+  .btn-stop:hover { color:var(--red); border-color:var(--red); }
 </style>
 </head>
 <body>
@@ -253,9 +292,9 @@ const char *kDashboardHtml = R"HTML(<!DOCTYPE html>
     <table>
       <thead><tr>
         <th>App</th><th>Session</th><th>PID</th><th>Uptime</th>
-        <th>Mem</th><th>CPU%</th><th>Conns</th><th>↓ In</th><th>↑ Out</th>
+        <th>Mem</th><th>CPU%</th><th>Conns</th><th>↓ In</th><th>↑ Out</th><th></th>
       </tr></thead>
-      <tbody id="rows"><tr><td class="empty" colspan="9">No running apps</td></tr></tbody>
+      <tbody id="rows"><tr><td class="empty" colspan="10">No running apps</td></tr></tbody>
     </table>
   </div>
 </div>
@@ -280,6 +319,19 @@ function fmtDur(s){
   return sec+"s";
 }
 function push(arr,v){ arr.push(v); if (arr.length>HIST) arr.shift(); }
+
+async function sessionAction(path, sid, btn){
+  if (btn) btn.disabled = true;
+  try {
+    await fetch(path+"?sid="+encodeURIComponent(sid), {method:"POST"});
+  } catch(e) { /* dashboard poll will reflect the current state regardless */ }
+  tick();
+}
+function reloadApp(sid, btn){ sessionAction("api/reload", sid, btn); }
+function stopApp(sid, btn){
+  if (!confirm("Stop this app? Unsaved state for this session will be lost.")) return;
+  sessionAction("api/stop", sid, btn);
+}
 
 function draw(id, arr, color, max){
   const cv = document.getElementById(id);
@@ -364,10 +416,11 @@ async function tick(){
   // table
   const rows = document.getElementById("rows");
   if (!d.workers.length){
-    rows.innerHTML = '<tr><td class="empty" colspan="9">No running apps</td></tr>';
+    rows.innerHTML = '<tr><td class="empty" colspan="10">No running apps</td></tr>';
   } else {
     rows.innerHTML = d.workers.map(w=>{
       const active = w.conns>0;
+      const sid = w.sid.replace(/'/g,"");
       return "<tr>"+
         "<td><span class='dot "+(active?"up":"idle")+"'></span>"+w.app+"</td>"+
         "<td class='dim'>"+w.sid.slice(0,8)+"</td>"+
@@ -378,9 +431,14 @@ async function tick(){
         "<td>"+w.conns+"</td>"+
         "<td>"+fmtBytes(w.bytes_in)+"</td>"+
         "<td>"+fmtBytes(w.bytes_out)+"</td>"+
+        "<td class='actions'>"+
+          "<button class='btn btn-reload' onclick=\"reloadApp('"+sid+"',this)\">Reload</button>"+
+          "<button class='btn btn-stop' onclick=\"stopApp('"+sid+"',this)\">Stop</button>"+
+        "</td>"+
       "</tr>";
     }).join("");
   }
+
 
   prev = d; prevT = now;
 }
@@ -497,6 +555,21 @@ std::string AdminServer::build_stats_json() {
   return js.str();
 }
 
+std::string AdminServer::handle_action(const std::string &target, bool reload) {
+  std::string sid = query_param(target, "sid");
+  if (!is_valid_sid(sid)) {
+    return http_response(400, "Bad Request", "application/json",
+                         "{\"ok\":false,\"error\":\"invalid sid\"}");
+  }
+
+  bool ok = reload ? workers_.restart_session(sid) != nullptr
+                   : workers_.kill_session(sid);
+  std::string body =
+      ok ? "{\"ok\":true}" : "{\"ok\":false,\"error\":\"no such session\"}";
+  return http_response(ok ? 200 : 404, ok ? "OK" : "Not Found",
+                       "application/json", body);
+}
+
 void AdminServer::handle_connection(int client_fd) {
   std::string head, leftover;
   if (!read_http_head(client_fd, head, leftover)) return;
@@ -509,7 +582,11 @@ void AdminServer::handle_connection(int client_fd) {
   }
 
   std::string path = req.path();
-  if (path == "/stats.json") {
+  if (req.method == "POST" && path == "/api/stop") {
+    send_all(client_fd, handle_action(req.target, false));
+  } else if (req.method == "POST" && path == "/api/reload") {
+    send_all(client_fd, handle_action(req.target, true));
+  } else if (path == "/stats.json") {
     send_all(client_fd, http_response(200, "OK", "application/json",
                                       build_stats_json()));
   } else if (path == "/" || path.empty()) {
